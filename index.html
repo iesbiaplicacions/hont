@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador d'escons · València · Congrés</title>
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --text: #1b2430;
+    --muted: #667085;
+    --line: #dde1e7;
+    --accent: #1f5fbf;
+    --win: #e8f1ff;
+    --cut: #fff3d6;
+    --out: #b42318;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161c; --panel: #1b212a; --text: #e8ecf1; --muted: #93a0b2;
+      --line: #2e3745; --accent: #6ea4ff; --win: #20324f; --cut: #4a3d17; --out: #ff8a7a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161c; --panel: #1b212a; --text: #e8ecf1; --muted: #93a0b2;
+    --line: #2e3745; --accent: #6ea4ff; --win: #20324f; --cut: #4a3d17; --out: #ff8a7a;
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  p.sub { margin: 0 0 20px; color: var(--muted); max-width: 70ch; }
+  section {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-weight: 600; color: var(--muted); font-size: .85rem; }
+  input[type=text], input[type=number] {
+    font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+  }
+  input[type=text] { width: 100%; min-width: 120px; }
+  input[type=number] { width: 120px; text-align: right; }
+  input[type=color] { width: 36px; height: 32px; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: var(--bg); }
+  input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .name-cell { display: flex; gap: 8px; align-items: center; }
+  .out { color: var(--out); font-size: .85rem; }
+  .seats-big { font-weight: 700; font-size: 1.1rem; }
+  .chamber { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+  .seat { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .9rem; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+  td.w { background: var(--win); font-weight: 700; }
+  td.c { background: var(--cut); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+  button {
+    font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  }
+  .note { color: var(--muted); font-size: .88rem; margin: 10px 0 0; }
+  .kpi { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 8px; }
+  .kpi div { min-width: 120px; }
+  .kpi b { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+  .kpi small { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Escons per partit · circumscripció de València</h1>
+  <p class="sub">Eleccions generals al Congrés dels Diputats: 16 escons, llistes tancades, repartiment pel mètode d'Hondt i barrera del 3 % dels vots vàlids de la circumscripció. Edita els noms, els colors i els vots; el resultat s'actualitza al moment.</p>
+
+  <section>
+    <h2>Vots</h2>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Partit</th><th>Vots</th><th>% vàlids</th><th>Escons</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+        <tfoot>
+          <tr>
+            <td>Vots en blanc</td>
+            <td><input type="number" id="blank" min="0" step="1" value="12000" aria-label="Vots en blanc"></td>
+            <td id="blankPct"></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="toolbar">
+      <button id="reset" type="button">Restaura l'exemple</button>
+      <button id="clear" type="button">Posa tots els vots a zero</button>
+    </div>
+    <p class="note">Les dades inicials són un exemple inventat, no resultats oficials. Els vots en blanc compten com a vàlids per a la barrera, però no reben escons.</p>
+  </section>
+
+  <section>
+    <h2>Resultat</h2>
+    <div class="kpi">
+      <div><b id="kValid">0</b><small>vots vàlids</small></div>
+      <div><b id="kThr">0</b><small>mínim per al 3 %</small></div>
+      <div><b id="kSeats">0 / 16</b><small>escons repartits</small></div>
+    </div>
+    <div class="chamber" id="chamber" role="img" aria-label="Distribució dels 16 escons"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section>
+    <h2>Quocients d'Hondt</h2>
+    <p class="note" style="margin:0 0 10px">Cada partit que supera la barrera es divideix entre 1, 2, 3… Els 16 quocients més alts s'enduen un escó (en blau). El quocient en groc és el primer que es queda fora.</p>
+    <div class="scroll"><table id="dh"></table></div>
+    <p class="note">En cas d'empat exacte en l'últim escó, la llei ho resol per sorteig; ací es desempata pel partit amb més vots.</p>
+  </section>
+</main>
+
+<script>
+const SEATS = 16, THRESHOLD = 0.03;
+const EXAMPLE = [
+  { name: "Partit A", votes: 470000, color: "#1f77d0" },
+  { name: "Partit B", votes: 360000, color: "#d6372f" },
+  { name: "Partit C", votes: 210000, color: "#4a8f3a" },
+  { name: "Partit D", votes: 150000, color: "#c9459b" },
+  { name: "Partit E", votes: 95000,  color: "#e8a317" },
+  { name: "Partit F", votes: 22000,  color: "#7a5cc8" }
+];
+let parties = EXAMPLE.map(p => ({ ...p }));
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString("ca-ES");
+const pct = n => (n * 100).toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " %";
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function buildInputs() {
+  $("rows").innerHTML = parties.map((p, i) => `
+    <tr>
+      <td><div class="name-cell">
+        <input type="color" data-i="${i}" data-f="color" value="${p.color}" aria-label="Color del partit ${i + 1}">
+        <input type="text" data-i="${i}" data-f="name" value="${esc(p.name)}" aria-label="Nom del partit ${i + 1}">
+      </div></td>
+      <td><input type="number" min="0" step="1" data-i="${i}" data-f="votes" value="${p.votes}" aria-label="Vots del partit ${i + 1}"></td>
+      <td id="pct${i}"></td>
+      <td id="seat${i}"></td>
+    </tr>`).join("");
+}
+
+function calc() {
+  const blank = Math.max(0, parseInt($("blank").value) || 0);
+  const valid = parties.reduce((s, p) => s + p.votes, 0) + blank;
+  const minVotes = valid * THRESHOLD;
+  const eligible = parties.map(p => valid > 0 && p.votes > 0 && p.votes >= minVotes);
+
+  // Tots els quocients dels partits que superen la barrera
+  const q = [];
+  parties.forEach((p, i) => {
+    if (!eligible[i]) return;
+    for (let d = 1; d <= SEATS; d++) q.push({ i, d, v: p.votes / d, votes: p.votes });
+  });
+  q.sort((a, b) => b.v - a.v || b.votes - a.votes || a.i - b.i);
+  const winners = q.slice(0, SEATS);
+  const cut = q[SEATS] || null;
+  const seats = parties.map(() => 0);
+  winners.forEach(w => seats[w.i]++);
+  const winSet = new Set(winners.map(w => w.i + "-" + w.d));
+  return { blank, valid, minVotes, eligible, seats, winSet, cut };
+}
+
+function render() {
+  const r = calc();
+  parties.forEach((p, i) => {
+    $("pct" + i).innerHTML = r.valid ? pct(p.votes / r.valid) + (r.eligible[i] || p.votes === 0 ? "" : '<br><span class="out">sota el 3 %</span>') : "–";
+    $("seat" + i).innerHTML = `<span class="seats-big">${r.seats[i]}</span>`;
+  });
+  $("blankPct").textContent = r.valid ? pct(r.blank / r.valid) : "–";
+  $("kValid").textContent = fmt(r.valid);
+  $("kThr").textContent = fmt(Math.ceil(r.minVotes));
+  const total = r.seats.reduce((a, b) => a + b, 0);
+  $("kSeats").textContent = total + " / " + SEATS;
+
+  // Hemicicle simplificat: una fila de 16 escons ordenats per partit
+  let dots = "";
+  parties.forEach((p, i) => { for (let k = 0; k < r.seats[i]; k++) dots += `<div class="seat" style="background:${p.color}" title="${esc(p.name)}"></div>`; });
+  for (let k = total; k < SEATS; k++) dots += `<div class="seat" style="background:var(--line)" title="Sense assignar"></div>`;
+  $("chamber").innerHTML = dots;
+  $("legend").innerHTML = parties.map((p, i) => r.seats[i] ? `<span style="--c:${p.color}">${esc(p.name)}: ${r.seats[i]}</span>` : "").join("");
+
+  // Taula d'Hondt
+  let h = "<thead><tr><th>Partit</th>";
+  for (let d = 1; d <= SEATS; d++) h += `<th>÷${d}</th>`;
+  h += "</tr></thead><tbody>";
+  parties.forEach((p, i) => {
+    h += `<tr><td><span style="color:${p.color}">●</span> ${esc(p.name)}</td>`;
+    for (let d = 1; d <= SEATS; d++) {
+      if (!r.eligible[i]) { h += `<td style="color:var(--muted)">–</td>`; continue; }
+      const cls = r.winSet.has(i + "-" + d) ? "w" : (r.cut && r.cut.i === i && r.cut.d === d ? "c" : "");
+      h += `<td class="${cls}">${fmt(Math.round(p.votes / d))}</td>`;
+    }
+    h += "</tr>";
+  });
+  $("dh").innerHTML = h + "</tbody>";
+}
+
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "blank") { render(); return; }
+  if (t.dataset.i === undefined) return;
+  const p = parties[+t.dataset.i], f = t.dataset.f;
+  p[f] = f === "votes" ? Math.max(0, parseInt(t.value) || 0) : t.value;
+  render();
+});
+$("reset").addEventListener("click", () => { parties = EXAMPLE.map(p => ({ ...p })); $("blank").value = 12000; buildInputs(); render(); });
+$("clear").addEventListener("click", () => { parties.forEach(p => p.votes = 0); $("blank").value = 0; buildInputs(); render(); });
+
+buildInputs();
+render();
+</script>
+</body>
+</html>
